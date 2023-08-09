@@ -30,6 +30,18 @@ public class PlayerManager : MonoBehaviourPunCallbacks
         }
     }
 
+    private void Update() {
+        if(!PV.IsMine) return;
+
+        if(Input.GetKeyDown(KeyCode.T)) Die();
+
+        if(spawnTimer>0)spawnTimer-=Time.deltaTime;
+        else if(!spawned){
+            spawned=true;
+            CreateController();
+        }
+    }
+
     void CreateController()
     {
         pc = PhotonNetwork.Instantiate(Path.Combine("PlayerObj"), Vector3.zero, Quaternion.identity, 0, new object[] {PV.ViewID});
@@ -37,7 +49,7 @@ public class PlayerManager : MonoBehaviourPunCallbacks
 
     public void Die()
     {
-        // GameManager.Instance.pc.Remove(pc.transform.GetChild(0).GetComponent<PlayerController>());
+        GameManager.Instance.pc.Remove(pc.transform.GetChild(0).GetComponent<PlayerController>());
         PhotonNetwork.Destroy(pc.gameObject);
 
         spawnTimer = spawnCd;

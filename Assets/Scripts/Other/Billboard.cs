@@ -8,7 +8,15 @@ public class Billboard : MonoBehaviour
 
     void Update()
     {
-        if(!target&&GameManager.Instance.pc) target = GameManager.Instance.pc.cam.transform;
+        if(!target&&GameManager.Instance.pc.Count>0) {
+            List<PlayerController> _pc = GameManager.Instance.pc;
+            foreach(PlayerController l in _pc){
+                if(l.PV.IsMine){
+                    target = l.transform;
+                    break;
+                }
+            }
+        }
         
         if(target){
             transform.LookAt(target.position);

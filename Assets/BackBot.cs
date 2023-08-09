@@ -7,65 +7,42 @@ using UnityEngine;
 
 public class BackBot : MonoBehaviour
 {
-    public NavMeshPath path;
-    private Rigidbody rb;
-    private float elapsed = 0.0f;
-
     public BackBotInfo info;
-
     public Image bb_image;
     public AudioSource source;
+
+    private Rigidbody rb;
+	public float speed;
     
-    public float speed;
+    public List<Transform> targets;
+	public NavMeshPath shortestPath;
+	private Transform shotestTarget;
 
-    public Transform target;
 
-    IEnumerator Start() {
 
+    private void Awake() {
+        
         SetUp();
-		this.path = new NavMeshPath();
-
-		while (true) {
-
-			yield return new WaitForSeconds(1);
-
-			NavMesh.CalculatePath(this.transform.position,this.target.position,NavMesh.AllAreas,this.path);
-		}
-	}
+    }
 
     private void Update() {
 
-        if(!target && GameManager.Instance.pc) target = GameManager.Instance.pc.transform;
-        if(!target)return;
+        if(targets.Count<=0){
+            foreach(PlayerController l in GameManager.Instance.pc){
+                targets.Add(l.transform);
+            }            
 
-        if(elapsed<1) elapsed+=Time.deltaTime;
-        else{
-            elapsed=0;
-            NavMesh.CalculatePath(transform.position, target.position, NavMesh.AllAreas, path);
-
-            // for (int i=0;i<path.corners.Length - 1;i++)
-            //     Debug.DrawLine(path.corners[i],path.corners[i+1],Color.red);
+            return;
         }
+        
 
-        // if (this.path.corners.Length < 2) {
+        Move();
 
-		// 	return;
-		// }
-
-		// this.rb.velocity = (this.path.corners[1] - this.path.corners[0]).normalized * 4;
-            Debug.Log("!");
-
-        for (int __i = 0; __i < this.path.corners.Length - 1; __i++) {
-			Debug.DrawLine(this.path.corners[__i],this.path.corners[__i + 1],Color.red);
-
+		if(shortestPath!=null){
+			if(shortestPath.corners[1]!=null) rb.AddForce((shortestPath.corners[1] - transform.position).normalized * speed);
+			else rb.AddForce((shotestTarget.position-transform.position).normalized*speed);
 		}
 
-		if (this.path.corners.Length < 2) {
-
-			return;
-		}
-
-		this.rb.velocity = (this.path.corners[1] - this.path.corners[0]).normalized * 4;
     }
 
     //-------------------------------------------------------------------------------------------------------------------
@@ -79,5 +56,32 @@ public class BackBot : MonoBehaviour
         rb = GetComponent<Rigidbody>();
 
     }
+
+    public void Move(){
+
+		float closestTargetDistance = float.MaxValue;
+		NavMeshPath path = null;
+
+		for(int i=0;i<targets.Count;i++){
+			if(targets[i]==null)continue;
+			path=new NavMeshPath();
+
+			if(NavMesh.CalculatePath(transform.position,targets[i].position,NavMesh.AllAreas,path)){
+				shotestTarget = targets[i];
+
+				float d = Vector3.Distance(transform.position,path.corners[0]);
+
+				for(int j=1;j<path.corners.Length;j++){
+					d+=Vector3.Distance(path.corners[j-1],path.corners[j]);
+				}
+
+				if(d<closestTargetDistance){
+					closestTargetDistance=d;
+					shortestPath = path;
+				}
+			}
+		}
+
+	}
 
 }

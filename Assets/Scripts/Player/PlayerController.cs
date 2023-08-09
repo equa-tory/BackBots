@@ -355,8 +355,12 @@ public class PlayerController : Damageable
             return;
         }
 
-        GameManager.Instance.pc = this;
+        GameManager.Instance.pc.Add(this);
 
     }
+
+    // [PunRPC]
+    // public void RPC_GMSet(){
+    // }
 
 }
