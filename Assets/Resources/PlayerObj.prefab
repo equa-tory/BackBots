@@ -1329,6 +1329,7 @@ MonoBehaviour:
   speedLerpSpeed: 1
   currentSpeed: 0
   walkSpeed: 5
+  crouchSpeed: 3
   sprintSpeed: 15
   slideSpeed: 30
   speedIncreaseMult: 1.5
@@ -1347,8 +1348,10 @@ MonoBehaviour:
   state: 0
   isSprinting: 0
   isSliding: 0
+  isCrouching: 0
   jumpKey: 32
   sprintKey: 304
+  ditheredTime: 0
 --- !u!114 &7794502220919286826
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1364,7 +1367,7 @@ MonoBehaviour:
   orientation: {fileID: 7891645034460644740}
   player: {fileID: 7891645033485273750}
   maxSlideTime: 2
-  slideForce: 100
+  slideForce: 200
   slideYScale: 0.5
 --- !u!114 &7891645034376234814
 MonoBehaviour:
@@ -1403,7 +1406,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_SynchronizePosition: 1
   m_SynchronizeRotation: 1
-  m_SynchronizeScale: 0
+  m_SynchronizeScale: 1
   m_UseLocal: 1
 --- !u!1 &7891645033495549269
 GameObject:

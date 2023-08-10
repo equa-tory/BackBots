@@ -46,6 +46,7 @@ public class PlayerController : Damageable
     public float speedLerpSpeed = 3f;
     public float currentSpeed;
     public float walkSpeed = 7f;
+    public float crouchSpeed = 3f;
     public float sprintSpeed = 12f;
     public float slideSpeed;
 
@@ -85,11 +86,13 @@ public class PlayerController : Damageable
         walking,
         sprinting,
         sliding,
+        crouching,
         air
     }
 
     public bool isSprinting;
     public bool isSliding;
+    public bool isCrouching;
 
 
     [Header("Input")]
@@ -109,7 +112,7 @@ public class PlayerController : Damageable
 
     }
 
-    private float ditheredTime;
+    public float ditheredTime;
 
     private void Update()
     {
@@ -132,17 +135,18 @@ public class PlayerController : Damageable
 
         //////////////////////////////////////////////////////
         if(isSliding){
-            ditheredTime+=Time.deltaTime;
 
-            if(OnSlope()){
-                float slopeAngle = Vector3.Angle(Vector3.up, slopeHit.normal);
-                float slopeAngleIncrease = 1 + (slopeAngle / 90f);
-                Debug.Log(slopeAngle + " " + slopeAngleIncrease);
+            if(OnSlope() && rb.velocity.y < 0){
+                
+                ditheredTime+=Time.deltaTime*8;
+                // float slopeAngle = Vector3.Angle(Vector3.up, slopeHit.normal);
+                // float slopeAngleIncrease = 1 + (slopeAngle / 90f);
+                // Debug.Log(slopeAngle + " " + slopeAngleIncrease);
 
-                currentSpeed = Mathf.Lerp(currentSpeed,slideSpeed,speedLerpSpeed*Time.deltaTime);
+                currentSpeed = ditheredTime;
             }
             else{
-                currentSpeed = Mathf.Lerp(currentSpeed,0,speedLerpSpeed*Time.deltaTime);
+                currentSpeed = Mathf.Lerp(currentSpeed,0,speedLerpSpeed*1.5f*Time.deltaTime);
             }
         }
         if(isSprinting&&!isSliding){
@@ -201,8 +205,12 @@ public class PlayerController : Damageable
 
     private void StateHandler()
     {
+        if(isCrouching){
+            state = MovementState.crouching;
+            currentSpeed = crouchSpeed;
+        }
 
-        if(isSliding){
+        else if(isSliding){
             state = MovementState.sliding;
         }
 

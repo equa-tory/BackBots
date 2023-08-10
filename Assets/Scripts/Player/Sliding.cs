@@ -14,6 +14,7 @@ public class Sliding : MonoBehaviour
     public float maxSlideTime;
     private float slideTimer;
     public float slideForce;
+    private float currentForce;
 
     public float slideYScale;
     private float startYScale;
@@ -37,8 +38,20 @@ public class Sliding : MonoBehaviour
         horizontalInput = Input.GetAxisRaw("Horizontal");
         verticalInput = Input.GetAxisRaw("Vertical");
 
-        if(Input.GetKeyDown(KeyCode.X) && rb.velocity.magnitude > pc.walkSpeed && (horizontalInput!=0||verticalInput!=0)) StartSlide();
+        if(Input.GetKeyDown(KeyCode.X)){
+            
+            if(rb.velocity.magnitude > pc.walkSpeed && (horizontalInput!=0||verticalInput!=0)&&!pc.isCrouching) StartSlide();
+            else StartCrouching();            
+        } 
         if(Input.GetKeyUp(KeyCode.X) && pc.isSliding) StopSlide();
+        
+        if(!Input.GetKey(KeyCode.X) && pc.isCrouching){
+            if(!Physics.Raycast(transform.position,transform.up,3)) StopCrouching();
+        }
+
+        Debug.Log(!Physics.Raycast(transform.position,Vector3.up,startYScale/2));
+        // Debug.DrawRay(transform.position,,Color.red);
+        
     }
 
     private void FixedUpdate() {
@@ -51,7 +64,11 @@ public class Sliding : MonoBehaviour
 
         player.localScale = new Vector3(player.localScale.x, slideYScale, player.localScale.z);
         rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
-        pc.currentSpeed = pc.slideSpeed;
+        
+        if(pc.OnSlope()) pc.ditheredTime = pc.currentSpeed;
+        else pc.currentSpeed = pc.slideSpeed;
+
+        currentForce = slideForce;
 
         slideTimer = maxSlideTime;
 
@@ -65,7 +82,7 @@ public class Sliding : MonoBehaviour
         // sliding normal   
         if(!pc.OnSlope() || rb.velocity.y > -0.1f){
             
-            rb.AddForce(inputDir.normalized * slideForce, ForceMode.Force);
+            rb.AddForce(inputDir.normalized * currentForce, ForceMode.Force);
 
             slideTimer -= Time.deltaTime;
         }
@@ -73,9 +90,15 @@ public class Sliding : MonoBehaviour
         // sliding down slope
         else{
 
-            rb.AddForce(pc.GetSlopeMoveDirection(inputDir) * slideForce, ForceMode.Force);
+            rb.AddForce(pc.GetSlopeMoveDirection(inputDir) * currentForce, ForceMode.Force);
         }
 
+        currentForce = Mathf.Lerp(currentForce,0,Time.deltaTime*4);
+
+        if(rb.velocity.magnitude<=3) {
+            StopSlide();
+            StartCrouching();
+        }
 
         // rb.AddForce(inputDir.normalized * slideForce, ForceMode.Force);
 
@@ -86,6 +109,30 @@ public class Sliding : MonoBehaviour
         pc.isSliding = false;
         lastInput = Vector3.zero;
 
+        if(!Physics.Raycast(transform.position,transform.up,3)) StartCrouching();
+        else player.localScale = new Vector3(player.localScale.x, startYScale, player.localScale.z);
+    }
+
+    //-----------------------------------------------------------------------------------------------
+
+    private void StartCrouching(){
+
+        pc.isCrouching=true;
+        rb.velocity = Vector3.zero;
+        player.localScale = new Vector3(player.localScale.x, slideYScale, player.localScale.z);
+        rb.AddForce(Vector3.down * 5f, ForceMode.Impulse);
+
+    }
+
+    private void StopCrouching(){
+        
+        pc.isCrouching = false;
+
         player.localScale = new Vector3(player.localScale.x, startYScale, player.localScale.z);
+    }
+
+    private void OnDrawGizmos() {
+        Gizmos.color=Color.red;
+        Gizmos.DrawLine(transform.position,transform.up*(startYScale/2));
     }
 }
