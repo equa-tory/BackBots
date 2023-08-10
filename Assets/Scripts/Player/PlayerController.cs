@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.Rendering;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
+using System.Collections;
 using UnityEngine;
 using TMPro;
 using Photon.Pun;
@@ -17,6 +18,9 @@ public class PlayerController : Damageable
     public string _nickName;
     public GameObject[] objsToDestroy;
     public GameObject w_model;
+    public PlayerManager playerManager;
+
+    public bool inSafeZone;
 
 
     [Header("References")]
@@ -24,6 +28,7 @@ public class PlayerController : Damageable
     [HideInInspector] public Rigidbody rb;
     public Camera cam;
     public ParticleSystem sprintParticles;
+    public TMP_Text speedText;
 
 
     [Header("Sound")]
@@ -38,9 +43,14 @@ public class PlayerController : Damageable
     [Space]
 
     [Header("Movement")]
+    public float speedLerpSpeed = 3f;
     public float currentSpeed;
     public float walkSpeed = 7f;
     public float sprintSpeed = 12f;
+    public float slideSpeed;
+
+    public float speedIncreaseMult;
+    public float slopeIncreaseMult;
 
     [Space]
 
@@ -55,7 +65,6 @@ public class PlayerController : Damageable
 
 
     [Header("Jumping")]
-
     public float airMultiplayer = 1f;
     public float groundDrag = 5f;
     public float jumpForce = 4f;
@@ -70,16 +79,17 @@ public class PlayerController : Damageable
 
 
     [Header("Statements")]
-
     public MovementState state;
     public enum MovementState
     {
         walking,
         sprinting,
+        sliding,
         air
     }
 
     public bool isSprinting;
+    public bool isSliding;
 
 
     [Header("Input")]
@@ -98,6 +108,8 @@ public class PlayerController : Damageable
     private void Start() {
 
     }
+
+    private float ditheredTime;
 
     private void Update()
     {
@@ -118,17 +130,33 @@ public class PlayerController : Damageable
         GroundCheck();
         FootStep();
 
-        if(transform.position.y <-25f) {TakeDamage(currentHealth/3);transform.position=new Vector3(transform.position.x,15,transform.position.z);rb.velocity=Vector3.zero;}
-        if(Input.GetKeyDown(KeyCode.T)) TakeDamage(Random.Range(10,35));
+        //////////////////////////////////////////////////////
+        if(isSliding){
+            ditheredTime+=Time.deltaTime;
 
-        if(isSprinting&&moveDirection!=Vector3.zero) sprintParticles.gameObject.SetActive(true);
+            if(OnSlope()){
+                float slopeAngle = Vector3.Angle(Vector3.up, slopeHit.normal);
+                float slopeAngleIncrease = 1 + (slopeAngle / 90f);
+                Debug.Log(slopeAngle + " " + slopeAngleIncrease);
+
+                currentSpeed = Mathf.Lerp(currentSpeed,slideSpeed,speedLerpSpeed*Time.deltaTime);
+            }
+            else{
+                currentSpeed = Mathf.Lerp(currentSpeed,0,speedLerpSpeed*Time.deltaTime);
+            }
+        }
+        if(isSprinting&&!isSliding){
+            currentSpeed = Mathf.Lerp(currentSpeed,sprintSpeed,speedLerpSpeed*Time.deltaTime);
+        }
+        //////////////////////////////////////////////////////
+
+        speedText.text = Mathf.Floor(rb.velocity.magnitude).ToString();
+
+        if(transform.position.y <-25f) {Die();}
+
+        if((isSprinting||isSliding)&&moveDirection!=Vector3.zero) sprintParticles.gameObject.SetActive(true);
         else sprintParticles.gameObject.SetActive(false);
 
-        if(dying){
-            
-            if(dofInt>0) dofInt-=Time.deltaTime*5;
-            //if(dofInt<.5f&&dofInt>0)Time.timeScale = dofInt*2;
-        }
     }
 
     private void FixedUpdate()
@@ -152,9 +180,7 @@ public class PlayerController : Damageable
         else rb.drag = 0;
         #endregion
 
-        
     }
-
 
     private void MyInput()
     {
@@ -176,14 +202,18 @@ public class PlayerController : Damageable
     private void StateHandler()
     {
 
-        if (isSprinting)
+        if(isSliding){
+            state = MovementState.sliding;
+        }
+
+        else if (isSprinting)
         {
             state = MovementState.sprinting;
-            currentSpeed = sprintSpeed;
+            // currentSpeed = sprintSpeed;
             currentFootstepCd = sprintFootstepCd;
         }
 
-        else if (!isSprinting)
+        else if (grounded)
         {
             state = MovementState.walking;
             currentSpeed = walkSpeed;
@@ -199,6 +229,7 @@ public class PlayerController : Damageable
 
     private void Movement()
     {
+        if(isSliding) return;
 
         moveDirection = orientation.forward * moveInput.y + orientation.right * moveInput.x;
 
@@ -220,7 +251,6 @@ public class PlayerController : Damageable
             rb.AddForce(moveDirection.normalized * currentSpeed * 10f * airMultiplayer, ForceMode.Force);
 
         rb.useGravity = !OnSlope();
-
 
     }
 
@@ -300,16 +330,22 @@ public class PlayerController : Damageable
         if(currentHealth<=0) Die();
     }
 
-    private float dofInt=10f;
     public override void Die()
     {
         if(!dying){
 
-            FadeManager.Instance.DyingFade();
+            if(onlineMode){
 
-            Invoke(nameof(AfterDeath),6f);
+                playerManager.Die();
 
-            dying=true;
+            }else{
+
+                FadeManager.Instance.DyingFade();
+
+                Invoke(nameof(AfterDeath),6f);
+
+                dying=true;
+            }
         }
 
     }
@@ -341,6 +377,8 @@ public class PlayerController : Damageable
         //input = InputManager.Instance;
         rb = GetComponent<Rigidbody>();
         PV = GetComponent<PhotonView>();
+
+        playerManager = PhotonView.Find((int)PV.InstantiationData[0]).GetComponent<PlayerManager>();
 
         currentHealth = maxHealth;
 

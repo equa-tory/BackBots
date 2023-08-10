@@ -12,6 +12,7 @@ public class PlayerCam : MonoBehaviour
 
     public float fovSpeed = 1f;
     public float sprintFov;
+    public float slideFov;
     public float walkFov;
     private float currentFov=60f;
 
@@ -38,8 +39,8 @@ public class PlayerCam : MonoBehaviour
 
     private void Update()
     {
-
-        if(pc.isSprinting&&pc.moveInput!=Vector3.zero) currentFov = Mathf.Lerp(currentFov, sprintFov, fovSpeed);
+        if(pc.isSliding) currentFov = Mathf.Lerp(currentFov, slideFov, fovSpeed);
+        else if(pc.isSprinting&&pc.moveInput!=Vector3.zero) currentFov = Mathf.Lerp(currentFov, sprintFov, fovSpeed);
         else currentFov = Mathf.Lerp(currentFov, walkFov, fovSpeed);
 
         cam.fieldOfView = currentFov;

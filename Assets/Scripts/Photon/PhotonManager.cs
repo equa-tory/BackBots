@@ -15,17 +15,19 @@ public class PhotonManager : MonoBehaviourPunCallbacks
     public bool onlineMode;
 
     public GameObject menuGo;
-    public GameObject menuCam;
 
     public TempTitle tt;
     public Transform ttPos;
 
     public TMP_InputField nickInput;
 
+    public GameObject loadingPanel;
+
     //-------------------------------------------------------------------------------------------------------------------
 
     private void Awake() {
         Instance=this;
+        loadingPanel.SetActive(true);
         LoadNickname();
     }
 
@@ -60,6 +62,8 @@ public class PhotonManager : MonoBehaviourPunCallbacks
     {
         Debug.Log("<color=cyan> Joined Lobby! </color>");
 
+        loadingPanel.SetActive(false);
+
         Connect();
     }
 
@@ -82,6 +86,14 @@ public class PhotonManager : MonoBehaviourPunCallbacks
         TempTitle _tt = Instantiate(tt,ttPos);
         _tt.Init(message,Color.cyan);
     }
+
+    public override void OnCreatedRoom(){
+        BB_Manager.Instance.CreateBBs();
+    }
+    public override void OnMasterClientSwitched(Player newMasterClient){
+        BB_Manager.Instance.CreateBBs();
+    }
+    
 
     //-------------------------------------------------------------------------------------------------------------------
 
@@ -106,8 +118,11 @@ public class PhotonManager : MonoBehaviourPunCallbacks
 
     public void Load(bool mode){
         menuGo.SetActive(false);
-        menuCam.SetActive(false);
         RoomManager.Instance.CreatePM(isOnline:mode);
+    }
+
+    public void ShowMainMenu(){
+        menuGo.SetActive(true);
     }
 
     public void SaveNickname(){

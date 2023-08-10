@@ -5,6 +5,7 @@ using UnityEngine;
 using Photon.Pun;
 using System.IO;
 using Photon.Realtime;
+using TMPro;
 
 public class PlayerManager : MonoBehaviourPunCallbacks
 {
@@ -15,6 +16,9 @@ public class PlayerManager : MonoBehaviourPunCallbacks
     public float spawnCd;
     private float spawnTimer;
     private bool spawned = true;
+
+    public GameObject spawnCam;
+    public TMP_Text respawnText;
 
     
     private void Awake()
@@ -33,24 +37,42 @@ public class PlayerManager : MonoBehaviourPunCallbacks
     private void Update() {
         if(!PV.IsMine) return;
 
-        if(Input.GetKeyDown(KeyCode.T)) Die();
-
-        if(spawnTimer>0)spawnTimer-=Time.deltaTime;
+        if(spawnTimer>0){
+            spawnTimer-=Time.deltaTime;
+            respawnText.text = "Respawn: " + Mathf.Ceil(spawnTimer).ToString();
+        }
         else if(!spawned){
             spawned=true;
             CreateController();
+        }
+
+        if(spawnTimer<=0 && Input.GetKeyDown(KeyCode.Escape)){
+            ExitMenu();
         }
     }
 
     void CreateController()
     {
-        pc = PhotonNetwork.Instantiate(Path.Combine("PlayerObj"), Vector3.zero, Quaternion.identity, 0, new object[] {PV.ViewID});
+        spawnCam.SetActive(false);
+
+        Transform spawnpoint = SpawnManager.Instance.GetSpawnpoint();
+        pc = PhotonNetwork.Instantiate(Path.Combine("PlayerObj"), spawnpoint.position, spawnpoint.rotation, 0, new object[] {PV.ViewID});
+    }
+
+    public void ExitMenu(){
+        PhotonManager.Instance.ShowMainMenu();
+
+        GameManager.Instance.pc.Remove(pc.transform.GetChild(0).GetComponent<PlayerController>());
+        PhotonNetwork.Destroy(pc.gameObject);
+        Destroy(gameObject);
     }
 
     public void Die()
     {
         GameManager.Instance.pc.Remove(pc.transform.GetChild(0).GetComponent<PlayerController>());
         PhotonNetwork.Destroy(pc.gameObject);
+
+        spawnCam.SetActive(true);
 
         spawnTimer = spawnCd;
         spawned = false;
